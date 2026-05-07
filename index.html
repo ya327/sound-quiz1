@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>おんぷトレーニング</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Rounded Mplus 1c', sans-serif;
+  background: linear-gradient(160deg, #ffecd2 0%, #fce0f0 30%, #d4eeff 65%, #c8f0e8 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16px 12px 24px;
+  overflow-x: hidden;
+}
+
+/* ========== ヘッダー ========== */
+h1 {
+  font-size: clamp(1.4em, 5vw, 2em);
+  color: #e05a77;
+  text-shadow: 2px 3px 0 rgba(0,0,0,0.08);
+  margin-bottom: 10px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+/* ========== 難易度ボタン ========== */
+.difficulty {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.diff-btn {
+  border: 3px solid #ddd;
+  background: white;
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-size: 0.9em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+  color: #888;
+}
+.diff-btn.active {
+  background: #74b9ff;
+  border-color: #0984e3;
+  color: white;
+  box-shadow: 0 3px 10px rgba(9,132,227,0.3);
+}
+
+/* ========== スコアエリア ========== */
+.score-area {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 1em;
+  font-weight: bold;
+}
+.score-box {
+  background: white;
+  border-radius: 999px;
+  padding: 6px 16px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  color: #555;
+}
+.combo-box {
+  background: linear-gradient(135deg, #fd79a8, #d63031);
+  color: white;
+  border-radius: 999px;
+  padding: 6px 16px;
+  box-shadow: 0 3px 10px rgba(253,121,168,0.4);
+  transition: transform 0.2s;
+}
+.combo-box.pop {
+  animation: comboPop 0.35s ease;
+}
+@keyframes comboPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* ========== マスコット ========== */
+.mascot {
+  font-size: clamp(2.4em, 9vw, 3.5em);
+  text-align: center;
+  min-height: 1.3em;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  transition: filter 0.3s;
+}
+.mascot.celebrate { animation: celebrate 0.5s ease; }
+.mascot.sad       { animation: sadWiggle 0.45s ease; }
+@keyframes celebrate {
+  0%   { transform: rotate(0)   scale(1);   }
+  25%  { transform: rotate(-18deg) scale(1.25); }
+  75%  { transform: rotate(18deg)  scale(1.25); }
+  100% { transform: rotate(0)   scale(1);   }
+}
+@keyframes sadWiggle {
+  0%,100% { transform: rotate(0); }
+  30%      { transform: rotate(-8deg); }
+  70%      { transform: rotate(8deg); }
+}
+
+/* ========== フィードバック ========== */
+.feedback {
+  font-size: clamp(1.2em, 4.5vw, 1.7em);
+  font-weight: bold;
+  text-align: center;
+  min-height: 1.6em;
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+.feedback.correct { color: #00b894; animation: bounceText 0.4s ease; }
+.feedback.wrong   { color: #e17055; animation: shakeText 0.4s ease; }
+@keyframes bounceText {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.2); }
+}
+@keyframes shakeText {
+  0%,100% { transform: translateX(0); }
+  25%      { transform: translateX(-8px); }
+  75%      { transform: translateX(8px); }
+}
+
+/* ========== 五線譜カード ========== */
+.staff-card {
+  background: white;
+  border-radius: 26px;
+  padding: 18px 20px 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+  margin-bottom: 18px;
+  width: 100%;
+  max-width: 420px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s;
+}
+.staff-card:active { transform: scale(0.97); }
+.staff-hint {
+  font-size: 0.72em;
+  color: #aaa;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Note head animation */
+@keyframes noteIn {
+  0%   { opacity: 0; transform: scale(0.3) translateY(-15px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.note-anim { animation: noteIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* Correct flash on staff */
+@keyframes correctFlash {
+  0%   { filter: drop-shadow(0 0 0px #00b894); }
+  50%  { filter: drop-shadow(0 0 12px #00b894); }
+  100% { filter: drop-shadow(0 0 0px #00b894); }
+}
+.staff-card.correct-flash { animation: correctFlash 0.5s ease; }
+@keyframes wrongFlash {
+  0%   { background: white; }
+  50%  { background: #fff0ee; }
+  100% { background: white; }
+}
+.staff-card.wrong-flash { animation: wrongFlash 0.5s ease; }
+
+/* ========== 回答ボタン ========== */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 8px;
+}
+.note-btn {
+  border: none;
+  border-radius: 50%;
+  width: clamp(60px, 16vw, 78px);
+  height: clamp(60px, 16vw, 78px);
+  font-size: clamp(1em, 3.5vw, 1.25em);
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  color: white;
+  box-shadow: 0 5px 14px rgba(0,0,0,0.18);
+  transition: transform 0.1s, box-shadow 0.1s, opacity 0.2s;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.25);
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: -0.02em;
+}
+.note-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
+.note-btn:active { transform: scale(0.88); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+.note-btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+/* Note colors */
+.btn-do  { background: linear-gradient(145deg, #ff6b6b, #ee5a24); }
+.btn-re  { background: linear-gradient(145deg, #fd9644, #e17055); }
+.btn-mi  { background: linear-gradient(145deg, #ffd32a, #f9ca24); color: #555; text-shadow: none; box-shadow: 0 5px 14px rgba(249,202,36,0.4); }
+.btn-fa  { background: linear-gradient(145deg, #26de81, #20bf6b); }
+.btn-so  { background: linear-gradient(145deg, #45aaf2, #2d98da); }
+.btn-ra  { background: linear-gradient(145deg, #a29bfe, #6c5ce7); }
+.btn-si  { background: linear-gradient(145deg, #fd79a8, #e84393); }
+
+/* ========== 正解ハイライト ========== */
+@keyframes btnCorrect {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.btn-correct-anim { animation: btnCorrect 0.4s ease; }
+
+/* ========== 星エフェクト ========== */
+#stars-container {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+.star {
+  position: absolute;
+  font-size: 1.8em;
+  opacity: 0;
+  animation: flyUp 1s ease forwards;
+}
+@keyframes flyUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(-120px) scale(1.6) rotate(30deg); }
+}
+
+/* ========== 音符名ラベル ========== */
+.note-label-svg {
+  font-family: inherit;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+/* ========== 問題数カウンター ========== */
+.progress-box {
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+  color: white;
+  border-radius: 999px;
+  padding: 6px 16px;
+  box-shadow: 0 3px 10px rgba(108,92,231,0.3);
+  font-weight: bold;
+}
+
+/* ========== リザルト画面 ========== */
+.result-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.result-card {
+  background: white;
+  border-radius: 32px;
+  padding: 36px 32px 28px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+  max-width: 340px;
+  width: 88%;
+  animation: popIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.result-mascot {
+  font-size: 4em;
+  margin-bottom: 10px;
+}
+.result-title {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #555;
+  margin-bottom: 8px;
+}
+.result-score-text {
+  font-size: 2.2em;
+  font-weight: bold;
+  color: #e05a77;
+  margin-bottom: 6px;
+}
+.result-message {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #636e72;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+.result-retry-btn {
+  background: linear-gradient(135deg, #fd79a8, #e84393);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 36px;
+  font-size: 1.15em;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 5px 16px rgba(232,67,147,0.4);
+  transition: transform 0.1s;
+}
+.result-retry-btn:active { transform: scale(0.94); }
+</style>
+</head>
+<body>
+
+<div id="stars-container"></div>
+
+<h1>🎵 おんぷトレーニング</h1>
+
+<!-- 難易度選択 -->
+<div class="difficulty">
+  <button class="diff-btn active" data-level="easy"   onclick="setDifficulty('easy')">やさしい</button>
+  <button class="diff-btn"        data-level="medium" onclick="setDifficulty('medium')">ふつう</button>
+  <button class="diff-btn"        data-level="hard"   onclick="setDifficulty('hard')">むずかしい</button>
+</div>
+
+<!-- スコア -->
+<div class="score-area">
+  <div class="score-box">⭐ せいかい: <span id="score">0</span></div>
+  <div class="combo-box" id="combo-box">🔥 コンボ: <span id="combo">0</span></div>
+  <div class="progress-box">📝 <span id="progress">1</span>/5もん</div>
+</div>
+
+<!-- マスコット -->
+<div class="mascot" id="mascot">🐣</div>
+
+<!-- フィードバック -->
+<div class="feedback" id="feedback">&nbsp;</div>
+
+<!-- 五線譜カード (クリックで音を再生) -->
+<div class="staff-card" id="staff-card" onclick="replayNote()" title="カードをタップで音をもう一度♪">
+  <svg id="staff-svg" viewBox="0 0 370 205" xmlns="http://www.w3.org/2000/svg"
+       style="width:100%;height:auto;display:block;"></svg>
+  <div class="staff-hint">♩ カードをタップして音をきこう</div>
+</div>
+
+<!-- 回答ボタン -->
+<div class="buttons" id="buttons">
+  <button class="note-btn btn-do" id="btn-ド"  onclick="answer('ド')">ド</button>
+  <button class="note-btn btn-re" id="btn-レ"  onclick="answer('レ')">レ</button>
+  <button class="note-btn btn-mi" id="btn-ミ"  onclick="answer('ミ')">ミ</button>
+  <button class="note-btn btn-fa" id="btn-ファ" onclick="answer('ファ')">ファ</button>
+  <button class="note-btn btn-so" id="btn-ソ"  onclick="answer('ソ')">ソ</button>
+  <button class="note-btn btn-ra" id="btn-ラ"  onclick="answer('ラ')">ラ</button>
+  <button class="note-btn btn-si" id="btn-シ"  onclick="answer('シ')">シ</button>
+</div>
+
+<!-- リザルト画面 -->
+<div class="result-overlay" id="result-overlay" style="display:none">
+  <div class="result-card">
+    <div class="result-mascot" id="result-mascot">🎉</div>
+    <div class="result-title">ゲーム終了！</div>
+    <div class="result-score-text"><span id="result-score">0</span>問せいかい！</div>
+    <div class="result-message" id="result-message"></div>
+    <button class="result-retry-btn" onclick="startGame()">もう一度あそぶ 🎵</button>
+  </div>
+</div>
+
+<script>
+// ===== オーディオ =====
+let audioCtx = null;
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// ピアノ風の音（サイン波＋倍音）
+function playTone(freq, duration = 0.8, vol = 0.4) {
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+
+  const masterGain = ctx.createGain();
+  masterGain.connect(ctx.destination);
+  masterGain.gain.setValueAtTime(0, ctx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.01);
+  masterGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+  // 基音 + 2倍音 + 3倍音 でピアノっぽく
+  [[1, 1], [2, 0.5], [3, 0.25], [4, 0.12]].forEach(([mult, amp]) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq * mult;
+    g.gain.value = amp;
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  });
+}
+
+function playCorrect() {
+  playTone(523.25, 0.18, 0.35);
+  setTimeout(() => playTone(659.25, 0.18, 0.35), 160);
+  setTimeout(() => playTone(783.99, 0.45, 0.35), 320);
+}
+function playWrong() {
+  playTone(185.00, 0.45, 0.3); // ざんねん音
+}
+
+// ===== 音符データ =====
+// 五線のy座標: 上から line5=55, line4=75, line3=95, line2=115, line1=135
+// 各ステップ = 10px
+const STAFF_LINES = [55, 75, 95, 115, 135]; // top→bottom = high→low
+
+// noteY: SVG上のy座標（大きいほど低音）
+const ALL_NOTES = [
+  // ド〜ソ (easy)
+  { name:'ド', noteY:155, freq:261.63, ledgerBelow:true,  label:'ド (C4)' },
+  { name:'レ', noteY:145, freq:293.66, label:'レ (D4)' },
+  { name:'ミ', noteY:135, freq:329.63, label:'ミ (E4)' },
+  { name:'ファ',noteY:125, freq:349.23, label:'ファ (F4)' },
+  { name:'ソ', noteY:115, freq:392.00, label:'ソ (G4)' },
+  // ラ〜シ (medium追加)
+  { name:'ラ', noteY:105, freq:440.00, label:'ラ (A4)' },
+  { name:'シ', noteY: 95, freq:493.88, label:'シ (B4)' },
+  // 高音域 (hard追加)
+  { name:'ド', noteY: 85, freq:523.25, label:'ド (C5)' },
+  { name:'レ', noteY: 75, freq:587.33, label:'レ (D5)' },
+  { name:'ミ', noteY: 65, freq:659.25, label:'ミ (E5)' },
+];
+
+const LEVEL_RANGES = { easy: 5, medium: 7, hard: 10 };
+
+// ===== ゲーム状態 =====
+let currentLevel   = 'easy';
+let currentNote    = null;
+let score          = 0;
+let combo          = 0;
+let answering      = false;
+let totalQuestions = 0;
+const GAME_LENGTH  = 5;
+let gameQuestions  = 0; // 今のゲームで何問目か
+let gameScore      = 0; // 今のゲームの正解数
+
+// ===== 難易度設定 =====
+function setDifficulty(level) {
+  currentLevel = level;
+  document.querySelectorAll('.diff-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.level === level));
+  score = combo = totalQuestions = 0;
+  updateScore();
+  startGame();
+}
+
+// ===== ゲーム開始・リセット =====
+function startGame() {
+  gameQuestions = 0;
+  gameScore = 0;
+  document.getElementById('result-overlay').style.display = 'none';
+  nextQuestion();
+}
+
+// ===== スコア表示 =====
+function updateScore() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('combo').textContent = combo;
+  document.getElementById('progress').textContent = Math.min(gameQuestions + 1, GAME_LENGTH);
+}
+
+// ===== 五線譜を描画 =====
+function drawStaff(noteData) {
+  const svg    = document.getElementById('staff-svg');
+  const X1     = 68;   // 五線の左端
+  const X2     = 358;  // 五線の右端
+  const NX     = 210;  // 音符のx座標
+  const noteY  = noteData.noteY;
+  const stemUp = noteY > 95; // 中線(B4=y95)より下なら符頭上向き
+
+  let html = '';
+
+  // --- 五線 ---
+  for (const ly of STAFF_LINES) {
+    html += `<line x1="${X1}" y1="${ly}" x2="${X2}" y2="${ly}"
+               stroke="#888" stroke-width="1.8" stroke-linecap="round"/>`;
+  }
+
+  // --- ト音記号 (Unicode 𝄞 を Times New Roman で描画) ---
+  html += `<text x="14" y="148" font-family="'Times New Roman',Times,serif"
+             font-size="100" fill="#555" style="user-select:none">𝄞</text>`;
+
+  // --- 加線（ド C4 = y155）---
+  if (noteData.ledgerBelow) {
+    html += `<line x1="${NX-18}" y1="155" x2="${NX+18}" y2="155"
+               stroke="#555" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  // ミ E5 (y65) は5線の上 → 加線不要（5線内）
+  // D5 y75 は4線上 → 不要
+
+  // --- 符幹 ---
+  const STEM_LEN = 52;
+  if (stemUp) {
+    html += `<line x1="${NX+12}" y1="${noteY-2}" x2="${NX+12}" y2="${noteY - STEM_LEN}"
+               stroke="#333" stroke-width="2.2" stroke-linecap="round"/>`;
+  } else {
+    html += `<line x1="${NX-12}" y1="${noteY+2}" x2="${NX-12}" y2="${noteY + STEM_LEN}"
+               stroke="#333" stroke-width="2.2" stroke-linecap="round"/>`;
+  }
+
+  // --- 符頭（塗りつぶし楕円、-15度傾き）---
+  html += `<ellipse id="note-head" cx="${NX}" cy="${noteY}" rx="13" ry="9.5"
+             fill="#222" transform="rotate(-15 ${NX} ${noteY})"/>`;
+
+  svg.innerHTML = html;
+
+  // 符頭にアニメーションを付与
+  const head = svg.getElementById('note-head');
+  head.classList.remove('note-anim');
+  void head.getBoundingClientRect(); // reflow
+  head.classList.add('note-anim');
+}
+
+// ===== ファンファーレ =====
+function playFanfare() {
+  const seq = [
+    [392.00, 0,    0.18],
+    [392.00, 0.18, 0.18],
+    [392.00, 0.36, 0.18],
+    [523.25, 0.54, 0.22],
+    [659.25, 0.76, 0.22],
+    [783.99, 0.98, 0.22],
+    [1046.5, 1.20, 0.7 ],
+  ];
+  seq.forEach(([freq, delay, dur]) => {
+    setTimeout(() => playTone(freq, dur, 0.38), delay * 1000);
+  });
+}
+
+// ===== リザルト表示 =====
+function showResults() {
+  playFanfare();
+
+  const msgs = [
+    ['😢', 'もう少し！\nいっしょにがんばろう！'],
+    ['🐣', '1もんせいかい！\nまたやってね😊'],
+    ['😊', '2もんせいかい！\nもうすこし！💪'],
+    ['😄', '3もんせいかい！\nよくできました！✨'],
+    ['🌟', '4もんせいかい！\nすごい！🎉'],
+    ['🏆', 'ぜんぶせいかい！\nてんさいだ〜！🌈🔥'],
+  ];
+  const [mascot, msg] = msgs[gameScore];
+
+  document.getElementById('result-mascot').textContent = mascot;
+  document.getElementById('result-score').textContent  = gameScore;
+  document.getElementById('result-message').textContent = msg;
+  document.getElementById('result-overlay').style.display = 'flex';
+}
+
+// ===== 次の問題 =====
+function nextQuestion() {
+  if (gameQuestions >= GAME_LENGTH) {
+    showResults();
+    return;
+  }
+  gameQuestions++;
+  answering = false;
+  setButtonsDisabled(false);
+
+  const pool = ALL_NOTES.slice(0, LEVEL_RANGES[currentLevel]);
+  currentNote = pool[Math.floor(Math.random() * pool.length)];
+  updateScore();
+
+  // フィードバックリセット
+  const fb = document.getElementById('feedback');
+  fb.textContent = '\u00a0';
+  fb.className = 'feedback';
+
+  // マスコットリセット
+  const mascot = document.getElementById('mascot');
+  mascot.textContent = '🐣';
+  mascot.className = 'mascot';
+
+  // カードフラッシュリセット
+  const card = document.getElementById('staff-card');
+  card.className = 'staff-card';
+
+  drawStaff(currentNote);
+  playTone(currentNote.freq, 0.9);
+}
+
+// ===== 音を再生（カードタップ） =====
+function replayNote() {
+  if (currentNote) playTone(currentNote.freq, 0.9);
+}
+
+// ===== 回答処理 =====
+function answer(name) {
+  if (answering) return;
+  answering = true;
+  setButtonsDisabled(true);
+
+  totalQuestions++;
+  const correct = name === currentNote.name;
+  const fb      = document.getElementById('feedback');
+  const mascot  = document.getElementById('mascot');
+  const card    = document.getElementById('staff-card');
+  const btn     = document.getElementById(`btn-${name}`);
+
+  if (correct) {
+    score++;
+    combo++;
+    gameScore++;
+    updateScore();
+
+    // コンボポップ
+    const comboBox = document.getElementById('combo-box');
+    comboBox.classList.remove('pop');
+    void comboBox.getBoundingClientRect();
+    comboBox.classList.add('pop');
+
+    // フィードバックメッセージ
+    let msg = 'せいかい！🎉';
+    if      (combo >= 10) msg = `すごい！${combo}れんぞく！🌈🔥`;
+    else if (combo >= 5)  msg = `かんぺき！${combo}れんぞく！🌟`;
+    else if (combo >= 3)  msg = `やったー！✨`;
+    fb.textContent = msg;
+    fb.className = 'feedback correct';
+
+    // マスコット
+    mascot.textContent = combo >= 5 ? '🌟' : combo >= 3 ? '😄' : '😊';
+    mascot.className = 'mascot celebrate';
+
+    // カード光る
+    card.className = 'staff-card correct-flash';
+
+    // ボタンアニメ
+    if (btn) {
+      btn.classList.remove('btn-correct-anim');
+      void btn.getBoundingClientRect();
+      btn.classList.add('btn-correct-anim');
+    }
+
+    playCorrect();
+    spawnStars();
+
+    setTimeout(nextQuestion, 1400);
+  } else {
+    combo = 0;
+    updateScore();
+
+    fb.textContent = 'ちがうよ！';
+    fb.className = 'feedback wrong';
+    mascot.textContent = '😢';
+    mascot.className = 'mascot sad';
+    card.className = 'staff-card wrong-flash';
+
+    playWrong();
+
+    setTimeout(() => {
+      fb.textContent = `こたえは「${currentNote.name}」だよ！`;
+      setTimeout(nextQuestion, 1200);
+    }, 700);
+  }
+}
+
+// ===== ボタン有効/無効 =====
+function setButtonsDisabled(disabled) {
+  document.querySelectorAll('.note-btn').forEach(b => b.disabled = disabled);
+}
+
+// ===== 星エフェクト =====
+function spawnStars() {
+  const container = document.getElementById('stars-container');
+  const card      = document.getElementById('staff-card');
+  const rect      = card.getBoundingClientRect();
+  const emojis    = ['⭐','✨','🌟','💫','🎵','🎶'];
+  const count     = combo >= 5 ? 8 : 4;
+
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'star';
+      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      el.style.left = `${rect.left + Math.random() * rect.width}px`;
+      el.style.top  = `${rect.top  + Math.random() * rect.height * 0.6}px`;
+      el.style.animationDelay = `${Math.random() * 0.2}s`;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 1200);
+    }, i * 60);
+  }
+}
+
+// ===== 起動 =====
+startGame();
+</script>
+</body>
+</html>
